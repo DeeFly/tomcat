@@ -16,6 +16,15 @@
  */
 package org.apache.catalina.startup;
 
+import org.apache.catalina.Globals;
+import org.apache.catalina.security.SecurityClassLoad;
+import org.apache.catalina.startup.ClassLoaderFactory.Repository;
+import org.apache.catalina.startup.ClassLoaderFactory.RepositoryType;
+import org.apache.jasper.runtime.JspFactoryImpl;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
+
+import javax.servlet.jsp.JspFactory;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -26,13 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.catalina.Globals;
-import org.apache.catalina.security.SecurityClassLoad;
-import org.apache.catalina.startup.ClassLoaderFactory.Repository;
-import org.apache.catalina.startup.ClassLoaderFactory.RepositoryType;
-import org.apache.juli.logging.Log;
-import org.apache.juli.logging.LogFactory;
 
 
 /**
@@ -472,6 +474,53 @@ public final class Bootstrap {
                 Thread.currentThread().setContextClassLoader(daemon.catalinaLoader);
             }
         }
+
+
+
+
+
+
+
+
+        JspFactoryImpl factory = new JspFactoryImpl();
+        org.apache.jasper.security.SecurityClassLoad.securityClassLoad(factory.getClass().getClassLoader());
+        if (System.getSecurityManager() != null) {
+            String basePackage = "org.apache.jasper.";
+            try {
+                factory.getClass().getClassLoader().loadClass(basePackage +
+                        "runtime.JspFactoryImpl$PrivilegedGetPageContext");
+                factory.getClass().getClassLoader().loadClass(basePackage +
+                        "runtime.JspFactoryImpl$PrivilegedReleasePageContext");
+                factory.getClass().getClassLoader().loadClass(basePackage +
+                        "runtime.JspRuntimeLibrary");
+                factory.getClass().getClassLoader().loadClass(basePackage +
+                        "runtime.ServletResponseWrapperInclude");
+                factory.getClass().getClassLoader().loadClass(basePackage +
+                        "servlet.JspServletWrapper");
+            } catch (ClassNotFoundException ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
+
+        if (JspFactory.getDefaultFactory() == null) {
+            JspFactory.setDefaultFactory(factory);
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         try {
             String command = "start";
